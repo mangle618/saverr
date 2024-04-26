@@ -23,6 +23,7 @@
 # Dword: MaxFilesPerJob
 # Decimal Value: Dealers Choice
 
+# Added an extra log file
 
 #############################
 ####### DO NOT MODIFY #######
@@ -1877,9 +1878,25 @@ $button_download.Add_Click({
                         $howLong = (get-date).Subtract($startTime)
                         if ($howLong.Minutes -eq "0") {
                             $dlTime = "$($howLong.Seconds) seconds"
+                            $MikeSpeed = [math]::Round((($totalbytes * 8) / $howLong.TotalSeconds),2)
+                            if ($comboBox_episodes.Text -eq "All"){
+                                $logDLMike = "$(get-date  -f "yyyy-MM-dd HH:mm:ss") $($info.title) $($comboBox_seasons.Text) $dltype Size: $totalbytes MB in $dlTime at $MikeSpeed Mbps"
+                            }
+                            else {
+                                $logDLMike = "$(get-date  -f "yyyy-MM-dd HH:mm:ss") $dlName size: $totalbytes MB in $dlTime at $MikeSpeed Mbps"
+                            }
+                            $logDLMike | Out-File ".\saverrLoggingDownloads.txt" -Append
                         }
                         else {
-                            $dlTime = "$($howLong.Minutes) minutes"
+                            $dlTime = "$([math]::Round($howLong.TotalMinutes)) minutes"
+                            $MikeSpeed = [math]::Round((($totalbytes * 8) / $howLong.TotalSeconds),2)
+                            if ($comboBox_episodes.Text -eq "All"){
+                                $logDLMike = "$(get-date  -f "yyyy-MM-dd HH:mm:ss") $($info.title) $($comboBox_seasons.Text) $dltype size: $totalbytes MB in $dlTime at $MikeSpeed Mbps"
+                            }
+                            else {
+                                $logDLMike = "$(get-date  -f "yyyy-MM-dd HH:mm:ss") $dlName size: $totalbytes MB in $dlTime at $MikeSpeed Mbps"
+                            }
+                            $logDLMike | Out-File ".\saverrLoggingDownloads.txt" -Append
                         }
                     }
                     else {
