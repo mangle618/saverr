@@ -1,0 +1,6 @@
+# Ignore local settings file
+saverrSettings.xml
+
+# (Optional) other runtime logs:
+saverrLog.txt
+saverrLoggingDownloads.txt

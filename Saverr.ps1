@@ -284,8 +284,7 @@ $loadingImg = @'
     gpae6E4FPbBU7Oie+iuKEOk+Id3QPRmMKGJOAUuy6k4UR4hgdiAQKOo78giwF5iXVXfCkyF+LasSLsQCSMmDG1O6IxeiUnfCkyF+NasSLsQCSMmDG1O6IxeiUnfChegVuRCLQC7EIpA
     LsQjkQiwCFVWIqIgLUcWTId6RVQkXYgGk5MGNKd2RC1GpO+FC9IpciEWgYgtxY1YlXIgFkJIHN6Z0Ry5Epe6EC9ErciEWgVyIRaBiC/H2rEq4EAsgJQ9uTOmOXIhK3YniCTEUCvWaM2
     dOj2KFvqRFE6LP57stqxL03Ok6bKeDaUUM/dHe7C+wZ/+59wpNRegP2n6In4sWqh9Q/iwaoKffp6eb5rCk5MGNKd0RQqQ/BJv3j9geDaAdXgdD001zWFLy4MaU7giFp2vDFwD9Pxcm/
-    0FJ0YF6f4rLyvPY+ugPNBVCSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7c
-    mOJkX0oe3JjiZF9KHtyY4mRfSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7
+    0FJ0YF6f4rLyvPY+ugPNBVCSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7
     cmOJkX0oe3JjiZF9KHtyY4mRfSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7cmOJkX0oe3JjiZF9KHtyY4mRfSh7cOLyJdqfDW2h3OryFdqfDW2h3OryFdqfDW2h3OryFdqfDW2h3OryFdq
     fDW2h3OryFdqfDSyR7/D/88mPYQlLgrwAAAABJRU5ErkJggg==
 '@
@@ -359,8 +358,9 @@ $form.BackColor                  = "#4a4a4a"
 $form.TopMost                    = $false
 $form.StartPosition              = 'CenterScreen'
 $form.Icon                       = [System.Drawing.Icon]::FromHandle((New-Object System.Drawing.Bitmap -Argument $stream).GetHIcon())
-$form.FormBorderStyle            = "FixedDialog"
-$form.MaximizeBox                = $false
+$form.FormBorderStyle            = "Sizable"          # changed from FixedDialog
+$form.MaximizeBox                = $true              # changed from $false
+$form.MinimumSize                = New-Object System.Drawing.Size(550,500)  # added
 
 $label_title                     = New-Object system.Windows.Forms.Label
 $label_title.text                = "Saverr"
@@ -404,6 +404,7 @@ $textBox_search.width            = 300
 $textBox_search.height           = 20
 $textBox_search.location         = New-Object System.Drawing.Point(15,125)
 $textBox_search.Font             = 'Microsoft Sans Serif,10'
+$textBox_search.Anchor           = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
 
 $button_search                   = New-Object system.Windows.Forms.Button
 $button_search.BackColor         = "#f5a623"
@@ -413,6 +414,7 @@ $button_search.height            = 25
 $button_search.location          = New-Object System.Drawing.Point(345,124)
 $button_search.Font              = 'Microsoft Sans Serif,9,style=Bold'
 $button_search.FlatStyle         = "Flat"
+$button_search.Anchor            = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Right
 
 $button_download                 = New-Object system.Windows.Forms.Button
 $button_download.Enabled         = $false
@@ -423,6 +425,7 @@ $button_download.height          = 25
 $button_download.location        = New-Object System.Drawing.Point(345,174)
 $button_download.Font            = 'Microsoft Sans Serif,9,style=Bold'
 $button_download.FlatStyle       = "Flat"
+$button_download.Anchor          = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Right
 
 $button_settings                 = New-Object system.Windows.Forms.Button
 $button_settings.width           = 30
@@ -434,12 +437,14 @@ $button_settings.BackColor       = "Transparent"
 $button_settings.FlatAppearance.BorderSize = 0
 $button_settings.FlatAppearance.MouseDownBackColor = "Transparent"
 $button_settings.FlatAppearance.MouseOverBackColor = "#666666"
+$button_settings.Anchor          = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Right
 
 $groupBox_type                   = New-Object system.Windows.Forms.Groupbox
 $groupBox_type.height            = 40
 $groupBox_type.width             = 385
 $groupBox_type.text              = "Select Media Type"
 $groupBox_type.location          = New-Object System.Drawing.Point(140,46)
+$groupBox_type.Anchor            = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
 
 $RadioButton_movie               = New-Object system.Windows.Forms.RadioButton
 $RadioButton_movie.text          = "Movies"
@@ -493,6 +498,7 @@ $comboBox_results.width          = 300
 $comboBox_results.height         = 20
 $comboBox_results.location       = New-Object System.Drawing.Point(15,175)
 $comboBox_results.Font           = 'Microsoft Sans Serif,10'
+$comboBox_results.Anchor         = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
 
 $label_seasons                   = New-Object system.Windows.Forms.Label
 $label_seasons.text              = ""
@@ -640,9 +646,9 @@ $form2.BackColor                 = "#4a4a4a"
 $form2.TopMost                   = $false
 $form2.StartPosition             = 'CenterScreen'
 $form2.Icon                      = [System.Drawing.Icon]::FromHandle((New-Object System.Drawing.Bitmap -Argument $stream).GetHIcon())
-$form2.FormBorderStyle           = "FixedDialog"
-$form2.MaximizeBox               = $false
-$form2.StartPosition             = "CenterParent"
+$form2.FormBorderStyle           = "Sizable"          # changed from FixedDialog
+$form2.MaximizeBox               = $true              # changed from $false
+$form2.MinimumSize                = New-Object System.Drawing.Size(550,500)  # added
 
 $label2_title                    = New-Object system.Windows.Forms.Label
 $label2_title.text               = "Settings"
@@ -684,6 +690,7 @@ $textBox2_username.width         = 225
 $textBox2_username.height        = 20
 $textBox2_username.location      = New-Object System.Drawing.Point(110,110)
 $textBox2_username.Font          = 'Microsoft Sans Serif,10'
+$textBox2_username.Anchor        = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
 
 $label2_password                 = New-Object system.Windows.Forms.Label
 $label2_password.text            = "Plex Password:"
@@ -701,6 +708,7 @@ $textBox2_password.width         = 225
 $textBox2_password.height        = 20
 $textBox2_password.location      = New-Object System.Drawing.Point(110,155)
 $textBox2_password.Font          = 'Microsoft Sans Serif,10'
+$textBox2_password.Anchor        = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
 
 $button2_getToken                = New-Object system.Windows.Forms.Button
 $button2_getToken.BackColor      = "#f5a623"
@@ -735,6 +743,7 @@ $comboBox2_servers.width         = 225
 $comboBox2_servers.height        = 20
 $comboBox2_servers.location      = New-Object System.Drawing.Point(110,200)
 $comboBox2_servers.Font          = 'Microsoft Sans Serif,10'
+$comboBox2_servers.Anchor        = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
 
 $label2_dlPath                   = New-Object system.Windows.Forms.Label
 $label2_dlPath.text              = "Download Path:"
