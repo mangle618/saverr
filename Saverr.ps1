@@ -437,7 +437,7 @@ $button_settings.FlatAppearance.MouseOverBackColor = "#666666"
 
 $groupBox_type                   = New-Object system.Windows.Forms.Groupbox
 $groupBox_type.height            = 40
-$groupBox_type.width             = 285
+$groupBox_type.width             = 385
 $groupBox_type.text              = "Select Media Type"
 $groupBox_type.location          = New-Object System.Drawing.Point(140,46)
 
@@ -468,6 +468,15 @@ $RadioButton_music.height        = 20
 $RadioButton_music.location      = New-Object System.Drawing.Point(215,16)
 $RadioButton_music.Font          = 'Microsoft Sans Serif,9'
 $RadioButton_music.ForeColor     = "#ffffff"
+
+$RadioButton_song               = New-Object system.Windows.Forms.RadioButton
+$RadioButton_song.text          = "Songs"
+$RadioButton_song.AutoSize      = $true
+$RadioButton_song.width         = 80
+$RadioButton_song.height        = 20
+$RadioButton_song.location      = New-Object System.Drawing.Point(315,16)
+$RadioButton_song.Font          = 'Microsoft Sans Serif,9'
+$RadioButton_song.ForeColor     = "#ffffff"
 
 $label_results                   = New-Object system.Windows.Forms.Label
 $label_results.text              = "Results:"
@@ -620,7 +629,7 @@ $toolTip                         = New-Object System.Windows.Forms.ToolTip
 $toolTip.SetToolTip($label_search, "Searches by first Letter. Excluding 'The' and 'A'")
 
 $form.controls.AddRange(@($groupbox_type,$label_title,$pictureBox_logo,$pictureBox_thumb,$label_search,$textBox_search,$progressBar,$button_search,$button_download,$button_settings,$label_mediaTitle,$label_mediaScore,$comboBox_results,$comboBox_seasons,$comboBox_episodes,$label_mediaRating,$label_mediaSummary,$label_results,$label_seasons,$label_episodes,$label_DLTitle,$label_DLProgress,$button_cancel,$checkBoxButton_pause))
-$groupBox_type.controls.AddRange(@($RadioButton_movie,$RadioButton_tv,$RadioButton_music))
+$groupBox_type.controls.AddRange(@($RadioButton_movie,$RadioButton_tv,$RadioButton_music, $RadioButton_song))
 
 
 # settings form
@@ -882,12 +891,12 @@ function search {
         $sections = $scheme + $settings.server + "/library/sections/" + "?X-Plex-Token=" + $settings.serverToken
         $xmlsearch = plx $sections
 
-        #$sectionType = $groupBox_type.Controls | ? { $_.Checked } | Select-Object Text
+        #$sectionType = $groupBox_type.Controls | Where-Object { $_.Checked } | Select-Object Text
 
             # GUI Selection of 'type' to search for. Remove spaces and leading 'the' and 'a' since plex removes those from search words
             $searchName = ($textBox_search.Text).TrimStart().TrimEnd()
             $searchName = $searchName -replace '^the |^a ', ''
-            $sectionType = $groupBox_type.Controls | ? { $_.Checked -eq $true} | Select-Object Text
+            $sectionType = $groupBox_type.Controls | Where-Object { $_.Checked -eq $true} | Select-Object Text
 
             Switch ($sectionType.Text)
             {
@@ -900,14 +909,17 @@ function search {
                 'Artists'  {$script:type = "artist"
                             $subSection = "Directory"; Break
                 }
+                'Songs'  {$script:type = "track"
+                            $subSection = "Track"; Break
+                }
             }
             
             # get 'type' of key
-            $sections2search = $xmlsearch.MediaContainer.Directory | ? {$_.type -eq $type} | select key
+            $sections2search = $xmlsearch.MediaContainer.Directory | Where-Object {$_.type -eq $type} | Select-Object key
             $firstChar = $searchName.ToUpper()[0]
 
             # Search movies/tv
-            if ($type -ne "artist") {
+            if ($type -ne "artist" -and $type -ne "track") {
                 $sectionsList = new-object collections.generic.list[object]
 
                 foreach ($section in $sections2search) {
@@ -917,12 +929,12 @@ function search {
                 }
 
             # search through list for match
-            $script:searchResults = $sectionsList.MediaContainer.$subSection | ? {$_.title -like "*$searchName*" -and $_.type -eq $type} | select title,type,key,tagline,summary,year,contentrating,thumb,rating
+            $script:searchResults = $sectionsList.MediaContainer.$subSection | Where-Object {$_.title -like "*$searchName*" -and $_.type -eq $type} | Select-Object title,type,key,tagline,summary,year,contentrating,thumb,rating
 
             }
 
             #search artists
-            else {
+            elseif ($type -eq "artist" -and $subsection -eq "Directory") {
                 $artistList = new-object collections.generic.list[object]
 
                 foreach ($section in $sections2search) {
@@ -932,14 +944,37 @@ function search {
                      
                 }
 
-            $script:searchResults = $artistList.MediaContainer.$subSection | ? {$_.title -like "*$searchName*" -and $_.type -eq $type} | select title,type,key,thumb
+            $script:searchResults = $artistList.MediaContainer.$subSection | Where-Object {$_.title -like "*$searchName*" -and $_.type -eq $type} | Select-Object title,type,key,thumb
 
             # search through list for match
             $trackList = new-object collections.generic.list[object]
-            $artistPath = $artistsList.MediaContainer.$subSection | select key
+            $artistPath = $artistsList.MediaContainer.$subSection | Select-Object key
                 foreach ($artist in $artistPath) {
                     $artistURL = $scheme + $settings.server + "$($artist.key)" + "?X-Plex-Token=" + $settings.serverToken
                     $trackList.Add((plx $artistURl))
+            }
+
+
+            }
+            #search songs
+            else {
+                $songList = new-object collections.generic.list[object]
+
+                foreach ($section in $sections2search) {
+                    # Have to use advanced to get full track listing. Plex token uses & instead of ?
+                    $sectionsUrl = $scheme + $settings.server + "/library/sections/$($section.key)/all?type=10&includeAdvanced=1" + "&X-Plex-Token=" + $settings.serverToken
+                    $songList.Add((plx $sectionsUrl))
+                     
+                }
+
+            $script:searchResults = $songList.MediaContainer.$subSection | Where-Object {$_.title -like "*$searchName*" -and $_.type -eq $type} | Select-Object title,type,key,thumb
+
+            # search through list for match
+            $trackList = new-object collections.generic.list[object]
+            $songPath = $songList.MediaContainer.$subSection | Select-Object key
+                foreach ($song in $songPath) {
+                    $songURL = $scheme + $settings.server + "$($song.key)" + "?X-Plex-Token=" + $settings.serverToken
+                    $trackList.Add((plx $songURl))
             }
 
 
@@ -950,7 +985,7 @@ function search {
                 $comboBox_results.Text = "$(@($searchResults).count) $($sectionType.Text) found!"
                 $comboBox_results.Text = "$(@($searchResults).count) $($sectionType.Text) found!"
                 foreach ($item in $searchresults) {
-                    if ($type -ne "artist") {
+                    if ($type -ne "artist" -and $type -ne "track") {
                         if ($item.year) {
                             $comboBox_results.Items.Add($item.title + ' (' + $item.year + ')') 
                         }
@@ -979,7 +1014,7 @@ function mediaInfo {
 
     clearDLStatus
     $comboBox_index = $comboBox_results.SelectedIndex
-    $script:info = $searchResults[$comboBox_index] | Select title,type,key,tagline,summary,year,contentrating,thumb,rating,size
+    $script:info = $searchResults[$comboBox_index] | Select-Object title,type,key,tagline,summary,year,contentrating,thumb,rating,size
     $thumb = $scheme + $settings.server + $info.thumb + "?X-Plex-Token=" + $settings.serverToken
 
     # enable download button if no other downloads in progress
@@ -1005,7 +1040,7 @@ function mediaInfo {
     if ($info.contentrating) {
         $label_mediaRating.Text = "$($info.contentrating)"
     }
-    elseif ($type -ne "artist") {
+    elseif ($type -ne "artist" -and $type -ne "track") {
         $label_mediaRating.Text = "No Rating"
     }
     if ($info.rating) {
@@ -1022,7 +1057,7 @@ function mediaInfo {
         $comboBox_seasons.Items.Clear()
         $seasonPath = $scheme + $settings.server + "$($info.key)" + "?X-Plex-Token=" + $settings.serverToken
         $xmlSeason = plx $seasonPath
-            $script:seasons = $xmlSeason.MediaContainer.directory | select title,key,index
+            $script:seasons = $xmlSeason.MediaContainer.directory | Select-Object title,key,index
         foreach ($season in $seasons) {
             $comboBox_seasons.Items.Add($season.title)
         }
@@ -1040,7 +1075,7 @@ function mediaInfo {
         $comboBox_seasons.Items.Clear()
         $seasonPath = $scheme + $settings.server + "$($info.key)" + "?X-Plex-Token=" + $settings.serverToken
         $xmlSeason = plx $seasonPath
-            $script:seasons = $xmlSeason.MediaContainer.directory | select title,key,index,year
+            $script:seasons = $xmlSeason.MediaContainer.directory | Select-Object title,key,index,year
 
         foreach ($season in $seasons) {
             $comboBox_seasons.Items.Add($season.title)
@@ -1060,14 +1095,14 @@ function episodeSelection {
     
     clearDLStatus
     # Movies and tv shows
-    if ($type -ne "artist") {
+    if ($type -ne "artist" -and $type -ne "track") {
         $comboBox_episodes.Items.Clear()
         $script:comboBox_seasons_index = $comboBox_seasons.SelectedIndex
 
         if ($comboBox_seasons.Text -ne "All Episodes") {
             $episodePath = $scheme + $settings.server + "$($seasons[$comboBox_seasons_index].key)" + "?X-Plex-Token=" + $settings.serverToken
             $script:xmlEpisode = plx $episodePath
-                $script:episodes = $xmlEpisode.MediaContainer.video | select title,key,contentrating,summary,rating,year,thumb,originallyAvailableAt,index,duration
+                $script:episodes = $xmlEpisode.MediaContainer.video | Select-Object title,key,contentrating,summary,rating,year,thumb,originallyAvailableAt,index,duration
         
             foreach ($episode in $episodes) {
                 $comboBox_episodes.Items.Add($episode.index)
@@ -1094,7 +1129,7 @@ function episodeSelection {
         $comboBox_seasons_index = $comboBox_seasons.SelectedIndex
         $episodePath = $scheme + $settings.server + "$($seasons[$comboBox_seasons_index].key)" + "?X-Plex-Token=" + $settings.serverToken
         $script:xmlEpisode = plx $episodePath
-        $script:episodes = $xmlEpisode.MediaContainer.track | select title,key,index,duration,summary,parentYear,thumb,grandparentthumb,addedAt
+        $script:episodes = $xmlEpisode.MediaContainer.track | Select-Object title,key,index,duration,summary,parentYear,thumb,grandparentthumb,addedAt
 
         foreach ($episode in $episodes) {
             $comboBox_episodes.Items.Add($episode.title)
@@ -1124,8 +1159,8 @@ function mediaEpInfo {
 
     clearDLStatus
     $comboBox_episode_index = $comboBox_episodes.SelectedIndex
-    if ($comboBox_episode_index -ne $null -and $episodes -ne $null) {
-        $script:infoEp = $episodes[$comboBox_episode_index] | Select title,type,key,tagline,summary,year,contentrating,thumb,rating
+    if ($null -ne $comboBox_episode_index -and $null -ne $episodes) {
+        $script:infoEp = $episodes[$comboBox_episode_index] | Select-Object title,type,key,tagline,summary,year,contentrating,thumb,rating
     }
     
     if ($comboBox_episodes.Text -eq "All" -and $comboBox_seasons.Text -ne "All episodes") {
@@ -1150,7 +1185,7 @@ function mediaEpInfo {
         if ($infoEp.contentrating) {
             $label_mediaRating.Text = "$($infoEp.contentrating)"
         }
-        elseif ($type -ne "artist") {
+        elseif ($type -ne "artist" -and $type -ne "track") {
             $label_mediaRating.Text = "No Rating"
         }
         if ($infoEp.rating) {
@@ -1219,7 +1254,7 @@ function getServers {
 
         # get servers
         $serversXml = plx $serversUrl
-        $script:serverList =  $serversxml.MediaContainer.Server | select name,host,port,accessToken,localAddresses,owned
+        $script:serverList =  $serversxml.MediaContainer.Server | Select-Object name,host,port,accessToken,localAddresses,owned
 
         #output servers
         if ($serverList) {
@@ -1255,7 +1290,7 @@ function saveServer {
             $serverUrl = $selectedServer.Host + ":" + $selectedServer.Port
         }
         else {
-            $ipCheck = Invoke-RestMethod http://ipinfo.io/json | Select -exp ip
+            $ipCheck = Invoke-RestMethod http://ipinfo.io/json | Select-Object -exp ip
             if ($ipcheck -eq $selectedServer.Host) {
 
                 if ( (($selectedServer.localaddresses).GetType().name) -eq "String" ) {
@@ -1420,10 +1455,10 @@ function cancelJob {
     # This can throw an error in the console sometimes if the path is deleted too fast and then it doesn't exist. Not worth it to remove error, doesn't stop the app.
     if ($dlType -eq "allEp" -or $dlType -eq "allSeasons") {
         if (Test-Path $allSeasonPath) {
-            Get-ChildItem $allSeasonPath -Directory -recurse | where {-NOT $_.GetFiles("*","AllDirectories")} | del -recurse -ErrorAction SilentlyContinue
+            Get-ChildItem $allSeasonPath -Directory -recurse | Where-Object  {-NOT $_.GetFiles("*","AllDirectories")} | Remove-Item -recurse -ErrorAction SilentlyContinue
             if (Test-Path $allSeasonPath) {
                 if ((Get-ChildItem $allSeasonPath | Measure-Object).Count -eq 0) {
-                    del $allSeasonPath -ErrorAction SilentlyContinue
+                    Remove-Item $allSeasonPath -ErrorAction SilentlyContinue
                 }
             }
         }
@@ -1456,7 +1491,7 @@ $button_download.Add_Click({
             if ($type -eq "movie") {
                 $mediaURL = $scheme + $settings.server + $info.key + "?X-Plex-Token=" + $settings.serverToken
                 $mediaPath = plx $mediaURL
-                $mediaInfo = $mediaPath.MediaContainer.Video.Media.Part | select key,file -First 1
+                $mediaInfo = $mediaPath.MediaContainer.Video.Media.Part | Select-Object key,file -First 1
                 $dlURL = $scheme + $settings.server + $mediaInfo.key + "?download=1" + "&X-Plex-Token=" + $settings.serverToken
                 $script:dlName = Split-Path $mediaInfo.file -Leaf
                 $script:dlType = "one"
@@ -1470,7 +1505,7 @@ $button_download.Add_Click({
                     $script:allSeasonPath = "$($settings.dlPath)\$(Remove-InvalidChars $info.title)"
                     $allEpPath = "$allSeasonPath\$(Remove-InvalidChars $comboBox_seasons.Text)"
                     New-Item -ItemType Directory -Force -Path $allEpPath
-                    $allEp = $xmlepisode.MediaContainer.Video.Media.Part | select @{n="Source";e={$scheme + $settings.server + $_.key + "?X-Plex-Token=" + $settings.serverToken}},@{n="Destination";e={$allEpPath + "\" + (Split-Path $_.file -Leaf)}}
+                    $allEp = $xmlepisode.MediaContainer.Video.Media.Part | Select-Object @{n="Source";e={$scheme + $settings.server + $_.key + "?X-Plex-Token=" + $settings.serverToken}},@{n="Destination";e={$allEpPath + "\" + (Split-Path $_.file -Leaf)}}
                     $script:dlType = "allEp"
 
                     # remove links that have already been downloaded
@@ -1492,10 +1527,10 @@ $button_download.Add_Click({
                     $script:allSeasonPath = "$($settings.dlPath)\$(Remove-InvalidChars $info.title)"
                     $mediaURL = $scheme + $settings.server + $seasons.key[0] + "?X-Plex-Token=" + $settings.serverToken
                     $mediaPath = plx $mediaURL
-                    $seasonNumber = $mediaPath.MediaContainer.Video | select parenttitle
-                    $seasonClean = $seasonNumber.parenttitle | % {Remove-InvalidChars $_}
-                    $allEp = $mediaPath.MediaContainer.Video.Media.Part | select @{n="Source";e={$scheme + $settings.server + $_.key + "?X-Plex-Token=" + $settings.serverToken}},@{n="Destination";e={(Split-Path $_.file -Leaf)}}
-                    $allEpClean = $allEp.destination | % {Remove-InvalidChars $_}
+                    $seasonNumber = $mediaPath.MediaContainer.Video | Select-Object parenttitle
+                    $seasonClean = $seasonNumber.parenttitle | ForEach-Object {Remove-InvalidChars $_}
+                    $allEp = $mediaPath.MediaContainer.Video.Media.Part | Select-Object @{n="Source";e={$scheme + $settings.server + $_.key + "?X-Plex-Token=" + $settings.serverToken}},@{n="Destination";e={(Split-Path $_.file -Leaf)}}
+                    $allEpClean = $allEp.destination | ForEach-Object {Remove-InvalidChars $_}
                     $script:dlType = "allSeasons"
 
                     # combine source/destination/season data for Bitstransfer import
@@ -1522,7 +1557,7 @@ $button_download.Add_Click({
                     }    
 
                     # pre-create directories for seasons
-                    $seasonClean | select -Unique | % {New-Item -ItemType Directory -Force -Path "$allSeasonPath\$_"}
+                    $seasonClean | Select-Object -Unique | ForEach-Object {New-Item -ItemType Directory -Force -Path "$allSeasonPath\$_"}
 
                 }
 
@@ -1530,9 +1565,9 @@ $button_download.Add_Click({
                 else {
                     $mediaURL = $scheme + $settings.server + $infoEp.key + "?X-Plex-Token=" + $settings.serverToken
                     $mediaPath = plx $mediaURL
-                    $mediaInfo = $mediaPath.MediaContainer.Video.Media.Part | select key,file -First 1
+                    $mediaInfo = $mediaPath.MediaContainer.Video.Media.Part | Select-Object key,file -First 1
                     $dlURL = $scheme + $settings.server + $mediaInfo.key + "?download=1" + "&X-Plex-Token=" + $settings.serverToken
-                    $script:dlName = Split-Path $mediaInfo.file -Leaf | % {Remove-InvalidChars $_}
+                    $script:dlName = Split-Path $mediaInfo.file -Leaf | ForEach-Object {Remove-InvalidChars $_}
                     $script:dlType = "one"
                 }
              
@@ -1546,7 +1581,7 @@ $button_download.Add_Click({
                     $script:allSeasonPath = "$($settings.dlPath)\$(Remove-InvalidChars $info.title)"
                     $allEpPath = "$allSeasonPath\$(Remove-InvalidChars $comboBox_seasons.Text)"
                     New-Item -ItemType Directory -Force -Path $allEpPath
-                    $allEp = $xmlepisode.MediaContainer.Track.Media.Part | select @{n="Source";e={$scheme + $settings.server + $_.key + "?X-Plex-Token=" + $settings.serverToken}},@{n="Destination";e={$allEpPath + "\" + (Split-Path $_.file -Leaf)}}
+                    $allEp = $xmlepisode.MediaContainer.Track.Media.Part | Select-Object @{n="Source";e={$scheme + $settings.server + $_.key + "?X-Plex-Token=" + $settings.serverToken}},@{n="Destination";e={$allEpPath + "\" + (Split-Path $_.file -Leaf)}}
                     $script:dlType = "allTracks"
 
                     # remove links that have already been downloaded
@@ -1570,14 +1605,14 @@ $button_download.Add_Click({
 
                     # collect all album metadata paths
                     $mediaURL = @()
-                    $seasons | % { $mediaURL += $scheme + $settings.server + $_.key + "?X-Plex-Token=" + $settings.serverToken }
+                    $seasons | ForEach-Object { $mediaURL += $scheme + $settings.server + $_.key + "?X-Plex-Token=" + $settings.serverToken }
 
                     # get all tracks
-                    $all = $mediaURL | % {(plx $_).MediaContainer.Track}
-                    $allEp = $all.media.part | select @{n="Source";e={$scheme + $settings.server + $_.key + "?X-Plex-Token=" + $settings.serverToken}},@{n="Destination";e={(Split-Path $_.file -Leaf)}}  
-                    $allClean = $all.parenttitle | % {Remove-InvalidChars $_}
-                    $allSeasonClean = $all.parenttitle | % {Remove-InvalidChars $_}
-                    $allEpClean = $allEp.destination | % {Remove-InvalidChars $_}
+                    $all = $mediaURL | ForEach-Object {(plx $_).MediaContainer.Track}
+                    $allEp = $all.media.part | Select-Object @{n="Source";e={$scheme + $settings.server + $_.key + "?X-Plex-Token=" + $settings.serverToken}},@{n="Destination";e={(Split-Path $_.file -Leaf)}}  
+                    $allClean = $all.parenttitle | ForEach-Object {Remove-InvalidChars $_}
+                    $allSeasonClean = $all.parenttitle | ForEach-Object {Remove-InvalidChars $_}
+                    $allEpClean = $allEp.destination | ForEach-Object {Remove-InvalidChars $_}
                     $script:dlType = "allAlbums"
 
                     # combine source/destination/season data for Bitstransfer import
@@ -1603,7 +1638,7 @@ $button_download.Add_Click({
                     }
 
                     # pre-create directories for seasons
-                    $allClean | select -Unique | % {New-Item -ItemType Directory -Force -Path "$allSeasonPath\$_"}
+                    $allClean | Select-Object -Unique | ForEach-Object {New-Item -ItemType Directory -Force -Path "$allSeasonPath\$_"}
 
                 }
 
@@ -1611,10 +1646,10 @@ $button_download.Add_Click({
                 else {
                     $mediaURL = $scheme + $settings.server + $infoEp.key + "?X-Plex-Token=" + $settings.serverToken
                     $mediaPath = plx $mediaURL
-                    $mediaInfo = $mediaPath.MediaContainer.track.media.part | select key,file -First 1
-                    $mediaInfo2 = $mediaPath.MediaContainer.track | select grandparentTitle,parentTitle,title -First 1
+                    $mediaInfo = $mediaPath.MediaContainer.track.media.part | Select-Object key,file -First 1
+                    $mediaInfo2 = $mediaPath.MediaContainer.track | Select-Object grandparentTitle,parentTitle,title -First 1
                     $dlURL = $scheme + $settings.server + $mediaInfo.key + "?download=1" + "&X-Plex-Token=" + $settings.serverToken
-                    $script:dlName = Split-Path $mediaInfo.file -Leaf | % {Remove-InvalidChars $_}
+                    $script:dlName = Split-Path $mediaInfo.file -Leaf | ForEach-Object {Remove-InvalidChars $_}
                     $script:dlType = "one"
                 }
 
@@ -1639,10 +1674,13 @@ $button_download.Add_Click({
 
             # download all seasons or all albums
             elseif ($dltype -eq "allSeasons" -or $dlType -eq "allAlbums") {
-                $script:myjob = Start-BitsTransfer -source "$($allEpData.Source[0])" -Destination "$($allEpData.Destination[0])" -DisplayName "Downloading ..." -Description "All Episodes" -Asynchronous -Suspended
-                $allEpData[1..($allEpData.Length -1)] | Add-BitsFile $myjob
-                if ($ssl -eq $True) {bitsadmin /SetSecurityFlags $myjob.displayname 30}
-                Resume-BitsTransfer $myjob -Asynchronous
+                foreach ( $allEpData1 in $allEpData) {
+                    $script:myjob = Start-BitsTransfer -source "$($allEpData1.Source[0])" -Destination "$($allEpData1.Destination[0])" -DisplayName "Downloading ..." -Description "All Episodes" -Asynchronous -Suspended
+                    # $allEpData[1..($allEpData.Length -1)] | Add-BitsFile $myjob
+                    $allEpData1 | Add-BitsFile $myjob
+                    if ($ssl -eq $True) {bitsadmin /SetSecurityFlags $myjob.displayname 30}
+                    Resume-BitsTransfer $myjob -Asynchronous
+                }
             }
 
             # download a movie or one episode or one song
@@ -1680,7 +1718,7 @@ $button_download.Add_Click({
         # timeout
         :check while ($count -lt $timeout) {
 
-            if (((Get-BitsTransfer | ? { $_.JobState -eq "Transferring" }).Count -gt 0) -or (Get-BitsTransfer | ? { $_.JobState -eq "Transferred" }) -or (Get-BitsTransfer | ? { $_.JobState -eq "Error" })) {   
+            if (((Get-BitsTransfer | Where-Object { $_.JobState -eq "Transferring" }).Count -gt 0) -or (Get-BitsTransfer | Where-Object { $_.JobState -eq "Transferred" }) -or (Get-BitsTransfer | Where-Object { $_.JobState -eq "Error" })) {   
                 # exit check
                 break check
             }
@@ -1711,8 +1749,8 @@ $button_download.Add_Click({
         if ($count -ge $timeout) {
             $status = "failed"
 
-            if (Get-BitsTransfer | ? { $_.JobState -like "*Error*" }) {
-                $bitsError = (Get-BitsTransfer | select ErrorDescription).ErrorDescription
+            if (Get-BitsTransfer | Where-Object { $_.JobState -like "*Error*" }) {
+                $bitsError = (Get-BitsTransfer | Select-Object ErrorDescription).ErrorDescription
                 if ($debug) {
                     $eMSG = "$(Get-Date): Connection Timed out after $timeout seconds. $bitsError"
                     $eMSG | Out-File ".\saverrLog.txt" -Append
@@ -1723,10 +1761,10 @@ $button_download.Add_Click({
             Get-BitsTransfer | Remove-BitsTransfer
             if ($dlType -like "all*") {
                 if (Test-Path $allSeasonPath) {
-                    Get-ChildItem $allSeasonPath -Directory -recurse | where {-NOT $_.GetFiles("*","AllDirectories")} | del -recurse -ErrorAction SilentlyContinue
+                    Get-ChildItem $allSeasonPath -Directory -recurse | Where-Object  {-NOT $_.GetFiles("*","AllDirectories")} | Remove-Item -recurse -ErrorAction SilentlyContinue
                     if (Test-Path $allSeasonPath) {
                         if ((Get-ChildItem $allSeasonPath | Measure-Object).Count -eq 0) {
-                            del $allSeasonPath -ErrorAction SilentlyContinue
+                            Remove-Item $allSeasonPath -ErrorAction SilentlyContinue
                         }
                     }
                 }
@@ -1738,17 +1776,17 @@ $button_download.Add_Click({
             $label_DLProgress.Text = ""
         }
 
-        if ((Get-BitsTransfer | select ErrorDescription).ErrorDescription -like "*404*") {
+        if ((Get-BitsTransfer | Select-Object ErrorDescription).ErrorDescription -like "*404*") {
             $status = "failed"
 
             # remove bitstransfer jobs and clean up empty directories created
             Get-BitsTransfer | Remove-BitsTransfer
             if ($dlType -like "all*") {
                 if (Test-Path $allSeasonPath) {
-                    Get-ChildItem $allSeasonPath -Directory -recurse | where {-NOT $_.GetFiles("*","AllDirectories")} | del -recurse -ErrorAction SilentlyContinue
+                    Get-ChildItem $allSeasonPath -Directory -recurse | Where-Object  {-NOT $_.GetFiles("*","AllDirectories")} | Remove-Item -recurse -ErrorAction SilentlyContinue
                     if (Test-Path $allSeasonPath) {
                         if ((Get-ChildItem $allSeasonPath | Measure-Object).Count -eq 0) {
-                            del $allSeasonPath -ErrorAction SilentlyContinue
+                            Remove-Item $allSeasonPath -ErrorAction SilentlyContinue
                         }
                     }
                 }
@@ -1775,13 +1813,13 @@ $button_download.Add_Click({
             $checkBoxButton_pause.Enabled = $true
             $checkBoxButton_pause.Visible = $true
 
-            if (Get-BitsTransfer | ? { $_.JobState -ne "Transferred" }) {
+            if (Get-BitsTransfer | Where-Object { $_.JobState -ne "Transferred" }) {
 
-                :xfer while ((Get-BitsTransfer | ? { $_.JobState -eq "Transferring" }).Count -gt 0) { 
+                :xfer while ((Get-BitsTransfer | Where-Object { $_.JobState -eq "Transferring" }).Count -gt 0) { 
                     $totalbytes=0;    
                     $bytestransferred=0; 
                     $timeTaken = 0;
-                    foreach ($job in (Get-BitsTransfer | ? { $_.JobState -eq "Transferring" } | Sort-Object CreationTime)) {
+                    foreach ($job in (Get-BitsTransfer | Where-Object { $_.JobState -eq "Transferring" } | Sort-Object CreationTime)) {
                              
                         $totalbytes += [math]::round($job.BytesTotal /1MB);
                         $totalSize = byteSize $($job.BytesTotal)         
@@ -1855,8 +1893,8 @@ $button_download.Add_Click({
             # Finish and close Bitstransfer
             if ($script:cancelLoop -eq $false -and $script:pauseLoop -eq $false) {
 
-                if (Get-BitsTransfer | ? { $_.JobState -like "*Error*" }) {
-                    $bitsError = (Get-BitsTransfer | select ErrorDescription).ErrorDescription
+                if (Get-BitsTransfer | Where-Object { $_.JobState -like "*Error*" }) {
+                    $bitsError = (Get-BitsTransfer | Select-Object ErrorDescription).ErrorDescription
                     if ($debug) {
                         $eMSG = "$(Get-Date): Download Error. $bitsError"
                         $eMSG | Out-File ".\saverrLog.txt" -Append
@@ -1886,6 +1924,10 @@ $button_download.Add_Click({
                                 $logDLMike = "$(get-date  -f "yyyy-MM-dd HH:mm:ss") $dlName size: $totalbytes MB in $dlTime at $MikeSpeed Mbps"
                             }
                             $logDLMike | Out-File ".\saverrLoggingDownloads.txt" -Append
+                            # $script:myjob = Start-BitsTransfer -Source $dlURL -Destination "$($settings.dlPath)\$dlName" -DisplayName "Downloading ..." -Description $dlName -Asynchronous -Suspended
+                            write-output "-Source $dlURL -Destination $($settings.dlPath)\$dlName -DisplayName "Downloading ..." -Description $dlName -Asynchronous -Suspended" | Out-File ".\saverrLoggingDownloads.txt" -Append
+                            $myjob | Out-File ".\saverrLoggingDownloads.txt" -Append
+                
                         }
                         else {
                             $dlTime = "$([math]::Round($howLong.TotalMinutes)) minutes"
@@ -1897,6 +1939,7 @@ $button_download.Add_Click({
                                 $logDLMike = "$(get-date  -f "yyyy-MM-dd HH:mm:ss") $dlName size: $totalbytes MB in $dlTime at $MikeSpeed Mbps"
                             }
                             $logDLMike | Out-File ".\saverrLoggingDownloads.txt" -Append
+                            $myjob | Out-File ".\saverrLoggingDownloads.txt" -Append
                         }
                     }
                     else {
@@ -1920,10 +1963,10 @@ $button_download.Add_Click({
                 # remove any empty folder created
                 if ($dlType -like "all*") {
                     if (Test-Path $allSeasonPath) {
-                        Get-ChildItem $allSeasonPath -Directory -recurse | where {-NOT $_.GetFiles("*","AllDirectories")} | del -recurse -ErrorAction SilentlyContinue
+                        Get-ChildItem $allSeasonPath -Directory -recurse | Where-Object  {-NOT $_.GetFiles("*","AllDirectories")} | Remove-Item -recurse -ErrorAction SilentlyContinue
                         if (Test-Path $allSeasonPath) {
                             if ((Get-ChildItem $allSeasonPath | Measure-Object).Count -eq 0) {
-                                del $allSeasonPath -ErrorAction SilentlyContinue
+                                Remove-Item $allSeasonPath -ErrorAction SilentlyContinue
                             }
                         }
                     }
@@ -1944,10 +1987,10 @@ $button_download.Add_Click({
         # clean up any empty folders
         if ($dlType -like "all*") {
             if (Test-Path $allSeasonPath) {
-                Get-ChildItem $allSeasonPath -Directory -recurse | where {-NOT $_.GetFiles("*","AllDirectories")} | del -recurse -ErrorAction SilentlyContinue
+                Get-ChildItem $allSeasonPath -Directory -recurse | Where-Object  {-NOT $_.GetFiles("*","AllDirectories")} | Remove-Item -recurse -ErrorAction SilentlyContinue
                 if (Test-Path $allSeasonPath) {
                     if ((Get-ChildItem $allSeasonPath | Measure-Object).Count -eq 0) {
-                        del $allSeasonPath -ErrorAction SilentlyContinue
+                        Remove-Item $allSeasonPath -ErrorAction SilentlyContinue
                     }
                 }
             }
@@ -2075,6 +2118,26 @@ $textBox_search.Add_KeyUp({
                    $label_mediaSummary.height = 85
                    $toolTip.SetToolTip($label_search, "Searches by Artist Name")
                 }
+                elseif ($radiobutton_song.Checked) {
+                       clearMediaInfo
+                       clearDLStatus
+                       $textBox_search.Text = ""
+                       $label_search.text = "Search Song:"
+                       $label_seasons.Text = "Album:"
+                       $label_episodes.Text = "Track:"
+                       $label_episodes.location = New-Object System.Drawing.Point(280,225)
+                       $comboBox_episodes.location = New-Object System.Drawing.Point(325,215)
+                       $combobox_seasons.Visible = $true
+                       $combobox_episodes.Visible = $true
+                       $combobox_seasons.width = 195
+                       $combobox_episodes.width = 210
+                       $label_mediaTitle.location = New-Object System.Drawing.Point(140,280)
+                       $label_mediaRating.location = New-Object System.Drawing.Point(140,300)
+                       $label_mediaScore.location = New-Object System.Drawing.Point(140,300)
+                       $label_mediaSummary.location = New-Object System.Drawing.Point(140,320)
+                       $label_mediaSummary.height = 85
+                       $toolTip.SetToolTip($label_search, "Searches by Song Name")
+                    }
 }
 
 $checkBoxButton_pause.Add_CheckedChanged({
@@ -2143,6 +2206,7 @@ $checkBox_ssl.Add_CheckedChanged({
 $RadioButton_movie.Add_CheckedChanged($checked_type)
 $RadioButton_tv.Add_CheckedChanged($checked_type)
 $RadioButton_music.Add_CheckedChanged($checked_type)
+$RadioButton_song.Add_CheckedChanged($checked_type)
 
 # Show season media info on selection
 $comboBox_results.Add_SelectedIndexChanged({mediaInfo})
@@ -2170,10 +2234,10 @@ $form.add_FormClosing({
             # remove empty folders created
             if (($dlType -like "all*") -and ($script:pauseLoop -eq $true)) {
                 if (Test-Path $allSeasonPath) {
-                    Get-ChildItem $allSeasonPath -Directory -recurse | where {-NOT $_.GetFiles("*","AllDirectories")} | del -recurse -ErrorAction SilentlyContinue
+                    Get-ChildItem $allSeasonPath -Directory -recurse | Where-Object  {-NOT $_.GetFiles("*","AllDirectories")} | Remove-Item -recurse -ErrorAction SilentlyContinue
                     if (Test-Path $allSeasonPath) {
                         if ((Get-ChildItem $allSeasonPath | Measure-Object).Count -eq 0) {
-                            del $allSeasonPath -ErrorAction SilentlyContinue
+                            Remove-Item $allSeasonPath -ErrorAction SilentlyContinue
                         }
                     }
                 }
