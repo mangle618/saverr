@@ -1,9 +1,9 @@
-﻿#######################################
+#######################################
 # Name:    Saverr                     #
 # Desc:    d/l media from Plex        #
 # Author:  Ninthwalker                #
-# Date:    13APR2020 - Corona Edition #
-# Version: 1.1.0                      #
+# Date:    16NOV2021                  #
+# Version: 1.1.2                      #
 #######################################
 
 
@@ -23,6 +23,7 @@
 # Dword: MaxFilesPerJob
 # Decimal Value: Dealers Choice
 
+# Added an extra log file
 
 #############################
 ####### DO NOT MODIFY #######
@@ -108,12 +109,13 @@ function logIt {
     if ($debug) {
         $e = $_.Exception
         $line = $_.InvocationInfo.ScriptLineNumber
-        $msg = $e.Message 
+        $msg = $e.Message
+	
+        $eMSG = "$(Get-Date): caught exception: $e at $line. $msg"
+        $eMSG | Out-File ".\saverrLog.txt" -Append
     }
 }
 
-        $eMSG = "$(Get-Date): caught exception: $e at $line. $msg"
-        $eMSG | Out-File ".\saverrLog.txt" -Append
 # display size function
 function byteSize($num)
 {
@@ -852,7 +854,7 @@ $label2_help.ActiveLinkColor     = "#f5a623"
 $label2_help.add_Click({[system.Diagnostics.Process]::start("https://github.com/ninthwalker/saverr")})
 
 $label2_version                  = New-Object system.Windows.Forms.Label
-$label2_version.text             = "Ver. 1.1.0"
+$label2_version.text             = "Ver. 1.1.2"
 $label2_version.AutoSize         = $true
 $label2_version.width            = 70
 $label2_version.height           = 20
@@ -967,9 +969,9 @@ function search {
     }
 
     Catch {
+        logit
         $comboBox_results.Items.Clear()
         $ComboBox_results.Text = "Error! Check settings/token/server status?"
-        logit
     }
 }
 
@@ -1175,7 +1177,7 @@ function getToken {
         $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username,$password)))
 
         $headers = @{
-            "X-Plex-Version" = "1.1.0"
+            "X-Plex-Version" = "1.1.2"
             "X-Plex-Product" = "Saverr"
             "X-Plex-Client-Identifier" = "271938"
             "Content-Type" = "application/xml"
@@ -1202,9 +1204,9 @@ function getToken {
         $label2_tokenStatus.Text = "Token Saved!"
     }
     catch {
+        logit
         $label2_tokenStatus.ForeColor = "#ff0000"
         $label2_tokenStatus.Text = "Error! User/Pass?"
-        logit
     }
 }
 
@@ -1234,10 +1236,10 @@ function getServers {
         $label2_serverStatus.text = ""
     }
     Catch {
+        logit
         $label2_serverStatus.text = ""
         $comboBox2_servers.Items.Clear()
         $ComboBox2_servers.Text = "Error! Check token?"
-        logit
     }
 }
 
@@ -1285,9 +1287,9 @@ function saveServer {
         $label2_serverStatus.text = "Server Saved!"
     }
     Catch {
+        logit
         $label2_notice2.ForeColor = "#ff0000"
         $label2_notice2.text = "Error saving! Got token? selected a server?"
-        logit
     }
 }
 
@@ -1336,10 +1338,10 @@ function clearStatusSave {
         $label_mediaSummary.Text = ""
     }
     Catch {
+        logit
         $label_mediaTitle.ForeColor = "#ff0000"
         $label_mediaTitle.Text = "Error creating download Path"
         $label_mediaSummary.Text = "Could Not validate download directory:`n$dlPath.`n`nCheck path name or system permissions maybe?"
-        logit
     }
     
     Try {
@@ -1351,10 +1353,10 @@ function clearStatusSave {
         $label_mediaSummary.Text = ""
     }
     Catch {
+        logit
         $label_mediaTitle.ForeColor = "#ff0000"
         $label_mediaTitle.Text = "Error saving settings"
         $label_mediaSummary.Text = "Could Not Create settings file at:`n$PSScriptRoot.`n`nCheck path or system permissions maybe?"
-        logit
     }
 
     if ((!($settings.name)) -or (!($settings.server)) -or (!($settings.userToken)) -or (!($settings.serverToken)) -or (!($settings.dlPath))) {
@@ -1530,7 +1532,7 @@ $button_download.Add_Click({
                     $mediaPath = plx $mediaURL
                     $mediaInfo = $mediaPath.MediaContainer.Video.Media.Part | select key,file -First 1
                     $dlURL = $scheme + $settings.server + $mediaInfo.key + "?download=1" + "&X-Plex-Token=" + $settings.serverToken
-                    $script:dlName = Split-Path $mediaInfo.file -Leaf
+                    $script:dlName = Split-Path $mediaInfo.file -Leaf | % {Remove-InvalidChars $_}
                     $script:dlType = "one"
                 }
              
@@ -1574,6 +1576,7 @@ $button_download.Add_Click({
                     $all = $mediaURL | % {(plx $_).MediaContainer.Track}
                     $allEp = $all.media.part | select @{n="Source";e={$scheme + $settings.server + $_.key + "?X-Plex-Token=" + $settings.serverToken}},@{n="Destination";e={(Split-Path $_.file -Leaf)}}  
                     $allClean = $all.parenttitle | % {Remove-InvalidChars $_}
+                    $allSeasonClean = $all.parenttitle | % {Remove-InvalidChars $_}
                     $allEpClean = $allEp.destination | % {Remove-InvalidChars $_}
                     $script:dlType = "allAlbums"
 
@@ -1581,7 +1584,7 @@ $button_download.Add_Click({
                     $allEpData = @()
                     For ($I=0; $I -lt $allEp.count; $I++) {
 
-                        $finalDestination = $allSeasonPath + "\" + $seasonClean[$I] + "\" + $allEpClean[$I]
+                        $finalDestination = $allSeasonPath + "\" + $allSeasonClean[$I] + "\" + $allEpClean[$I]
 
                         if (!(Test-Path $finalDestination)) {
                             $allEpData += [pscustomobject] @{
@@ -1611,7 +1614,7 @@ $button_download.Add_Click({
                     $mediaInfo = $mediaPath.MediaContainer.track.media.part | select key,file -First 1
                     $mediaInfo2 = $mediaPath.MediaContainer.track | select grandparentTitle,parentTitle,title -First 1
                     $dlURL = $scheme + $settings.server + $mediaInfo.key + "?download=1" + "&X-Plex-Token=" + $settings.serverToken
-                    $script:dlName = Split-Path $mediaInfo.file -Leaf
+                    $script:dlName = Split-Path $mediaInfo.file -Leaf | % {Remove-InvalidChars $_}
                     $script:dlType = "one"
                 }
 
@@ -1875,9 +1878,25 @@ $button_download.Add_Click({
                         $howLong = (get-date).Subtract($startTime)
                         if ($howLong.Minutes -eq "0") {
                             $dlTime = "$($howLong.Seconds) seconds"
+                            $MikeSpeed = [math]::Round((($totalbytes * 8) / $howLong.TotalSeconds),2)
+                            if ($comboBox_episodes.Text -eq "All"){
+                                $logDLMike = "$(get-date  -f "yyyy-MM-dd HH:mm:ss") $($info.title) $($comboBox_seasons.Text) $dltype Size: $totalbytes MB in $dlTime at $MikeSpeed Mbps"
+                            }
+                            else {
+                                $logDLMike = "$(get-date  -f "yyyy-MM-dd HH:mm:ss") $dlName size: $totalbytes MB in $dlTime at $MikeSpeed Mbps"
+                            }
+                            $logDLMike | Out-File ".\saverrLoggingDownloads.txt" -Append
                         }
                         else {
-                            $dlTime = "$($howLong.Minutes) minutes"
+                            $dlTime = "$([math]::Round($howLong.TotalMinutes)) minutes"
+                            $MikeSpeed = [math]::Round((($totalbytes * 8) / $howLong.TotalSeconds),2)
+                            if ($comboBox_episodes.Text -eq "All"){
+                                $logDLMike = "$(get-date  -f "yyyy-MM-dd HH:mm:ss") $($info.title) $($comboBox_seasons.Text) $dltype size: $totalbytes MB in $dlTime at $MikeSpeed Mbps"
+                            }
+                            else {
+                                $logDLMike = "$(get-date  -f "yyyy-MM-dd HH:mm:ss") $dlName size: $totalbytes MB in $dlTime at $MikeSpeed Mbps"
+                            }
+                            $logDLMike | Out-File ".\saverrLoggingDownloads.txt" -Append
                         }
                     }
                     else {
@@ -1919,6 +1938,7 @@ $button_download.Add_Click({
     }
 
     Catch {
+        logit
         Get-BitsTransfer | Remove-BitsTransfer
 
         # clean up any empty folders
@@ -1944,7 +1964,6 @@ $button_download.Add_Click({
 
         # enable minimize again
         $form.MinimizeBox = $true
-        logit
     }
 
 })
@@ -1980,9 +1999,9 @@ $button2_dlPath.Add_Click({
         }
     }
     catch {
+        logit
         $label2_pathStatus.ForeColor = "#ff0000"
         $label2_pathStatus.Text = "Error! Check log"
-        logit
     }
 
 })

@@ -1,4 +1,10 @@
 # Saverr
+
+## Developers Note:  
+This script/repo is no longer maintained.  
+While it still works as far as i know, I'm not adding/changing to it any longer. I would suggest to check out a project called [PlexRipper](https://github.com/PlexRipper/PlexRipper) if you are interested in something like my Saverr, but with a lot better GUI and feature set. Thanks!
+
+
 Powershell script with a front-end GUI to download media from Plex Servers.  
 Allows you to search and save movies, tv shows, and music for offline/personal use.  
 Expanded from the original non-gui version: [directplexDownloader](https://github.com/ninthwalker/directPlexDownloader).
@@ -58,6 +64,7 @@ All config is done in the settings menu (Accessed by clicking the orange gear ic
 
 * **Plex Username:** Plex Username. Can be an email or a username. (this is not saved)  
 * **Plex Password:** Your Plex password. (this is not saved, only used to retrieve your plex token)  
+Note for 2FA: If 2FA is enabled, please add your 2FA token to the end of your password. ie: MyP@ssword347821
 * **Server:** After a token has been saved from entering a username/password you can select a Plex server to search from.  
 * **Download Path:** Navigate and select a path to save downloads to.
 * **SSL Required:** Select this if the server you are trying to connect to has 'Secure Connections: Required' enabled.
