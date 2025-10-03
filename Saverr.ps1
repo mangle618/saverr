@@ -1,11 +1,14 @@
+<#
+# Name:    Saverr      
+# Desc:    d/l media from Plex
+# Author:  Ninthwalker
+# Date:    16NOV2021
+# Date Updated: 2025.10.03
+# Version: 1.1.3
 #######################################
-# Name:    Saverr                     #
-# Desc:    d/l media from Plex        #
-# Author:  Ninthwalker                #
-# Date:    16NOV2021                  #
-# Version: 1.1.2                      #
-#######################################
-
+Updates from Mike
+2025.09.12 - Allowed windows to maximize
+#>
 
 ###### NOTES FOR USER #######
 
@@ -187,6 +190,8 @@ Add-Type -AssemblyName System.Windows.Forms, PresentationFramework, Presentation
 
 ################ Images ##################
 
+# <copilot:ignore>
+# Code block Copilot should not modify
 
 # load these images inside the script so external calls arents
 $plexImg = @'
@@ -315,7 +320,7 @@ NQRiI3gNTeBVLzRaUL0rPMK9qSk+z+r198ftMR8er+HQFOfAbwYgJqfFaJwxLsOumjf8JvbEgU8MGLqa
 F95ThMFQuNvb0ZWyLyWqeEAww0HmRUprTKi5phnm/3gmBPBGN4fSziCtkmL6ig52T3MSTiVXefZDf0yLIBD9VplEUb0O4t2auUmDAueS3XhP7/EaGICD1SXywL+yPDnHd4vF0s0tV8uK6Bp
 PwEAHUcTE+ClVQAAAABJRU5ErkJggg==
 '@
-
+# </copilot:ignore>
 # Image logo function
 function DecodeBase64Image {
     param ([Parameter(Mandatory=$true)][String]$ImageBase64)
@@ -1678,6 +1683,7 @@ $button_download.Add_Click({
                 $script:myjob = Start-BitsTransfer -source "$($allEpData.Source[0])" -Destination "$($allEpData.Destination[0])" -DisplayName "Downloading ..." -Description "All Episodes" -Asynchronous -Suspended
                 $allEpData[1..($allEpData.Length -1)] | Add-BitsFile $myjob
                 if ($ssl -eq $True) {bitsadmin /SetSecurityFlags $myjob.displayname 30}
+                
                 Resume-BitsTransfer $myjob -Asynchronous
             }
 
