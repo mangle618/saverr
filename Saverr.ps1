@@ -1484,7 +1484,7 @@ function cancelJob {
 }
 
 ########### OPERATIONS ###############
-
+get-date | Out-File -FilePath .\currentJob.txt -Append
 # Buttons
 $button_download.Add_Click({
 
@@ -1520,6 +1520,7 @@ $button_download.Add_Click({
                     $allEpPath = "$allSeasonPath\$(Remove-InvalidChars $comboBox_seasons.Text)"
                     New-Item -ItemType Directory -Force -Path $allEpPath
                     $allEp = $xmlepisode.MediaContainer.Video.Media.Part | Select-Object @{n="Source";e={$scheme + $settings.server + $_.key + "?X-Plex-Token=" + $settings.serverToken}},@{n="Destination";e={$allEpPath + "\" + (Split-Path $_.file -Leaf)}}
+                    $allEp | Select-Object * | Out-File -FilePath .\currentJob.txt -Append
                     $script:dlType = "allEp"
 
                     # remove links that have already been downloaded
@@ -1534,6 +1535,7 @@ $button_download.Add_Click({
                         }
 
                     }
+                    $allEpData | Select-Object * | Out-File -FilePath .\currentJob.txt -Append
 
                 }
                 # if all seasons and all episodes is selected
@@ -1682,17 +1684,19 @@ $button_download.Add_Click({
             if ($dlType -eq "allEp" -or $dlType -eq "allTracks") {
                 $script:myjob = Start-BitsTransfer -source "$($allEpData.Source[0])" -Destination "$($allEpData.Destination[0])" -DisplayName "Downloading ..." -Description "All Episodes" -Asynchronous -Suspended
                 $allEpData[1..($allEpData.Length -1)] | Add-BitsFile $myjob
+                $myjob | Select-Object -Property * |out-file .\currentJob.txt -append
                 if ($ssl -eq $True) {bitsadmin /SetSecurityFlags $myjob.displayname 30}
                 
                 Resume-BitsTransfer $myjob -Asynchronous
             }
 
             # download all seasons or all albums
-            elseif ($dltype -eq "allSeasons" -or $dlType -eq "allAlbums") {
+            elseif ($dlType -eq "allSeasons" -or $dlType -eq "allAlbums") {
                 foreach ( $allEpData1 in $allEpData) {
                     $script:myjob = Start-BitsTransfer -source "$($allEpData1.Source[0])" -Destination "$($allEpData1.Destination[0])" -DisplayName "Downloading ..." -Description "All Episodes" -Asynchronous -Suspended
-                    # $allEpData[1..($allEpData.Length -1)] | Add-BitsFile $myjob
-                    $allEpData1 | Add-BitsFile $myjob
+                    $allEpData[1..($allEpData.Length -1)] | Add-BitsFile $myjob
+                    # $allEpData1 | Add-BitsFile $myjob
+                    $myjob | Select-Object -Property * |out-file .\currentJob.txt -append
                     if ($ssl -eq $True) {bitsadmin /SetSecurityFlags $myjob.displayname 30}
                     Resume-BitsTransfer $myjob -Asynchronous
                 }
